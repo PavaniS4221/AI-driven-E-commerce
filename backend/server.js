@@ -9,6 +9,7 @@ import cartRouter from './routes/cartRoute.js'
 import orderRouter from './routes/orderRoute.js'
 import analyticsRouter from './routes/analyticsRoute.js'
 import predictionRoutes from "./routes/PredictRoutes.js";
+import bundleRoutes from "./routes/bundleRoutes.js";
 
 
 
@@ -29,6 +30,7 @@ app.use('/api/cart',cartRouter)
 app.use('/api/order',orderRouter)
 app.use('/api/analytics',analyticsRouter)
 app.use("/api/predictions",predictionRoutes);
+app.use("/api/bundles",bundleRoutes);
 
 app.get('/',(req,res)=>{
     res.send("API Working")
