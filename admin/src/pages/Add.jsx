@@ -18,6 +18,12 @@ const Add = ({token}) => {
    const [subCategory, setSubCategory] = useState("Topwear");
    const [bestseller, setBestseller] = useState(false);
    const [sizes, setSizes] = useState([]);
+   const [event, setEvent] = useState([])
+    const [bundleCategory, setBundleCategory] = useState("top")
+    const [tags, setTags] = useState("")
+    const [color, setColor] = useState("")
+    const [material, setMaterial] = useState("")
+   
 
    const onSubmitHandler = async (e) => {
     e.preventDefault();
@@ -33,6 +39,11 @@ const Add = ({token}) => {
       formData.append("subCategory",subCategory)
       formData.append("bestseller",bestseller)
       formData.append("sizes",JSON.stringify(sizes))
+      formData.append("event", event)
+      formData.append("bundleCategory", bundleCategory)
+      formData.append("tags", JSON.stringify(tags.split(",").map(t => t.trim())))
+      formData.append("color", color)
+      formData.append("material", material)
 
       image1 && formData.append("image1",image1)
       image2 && formData.append("image2",image2)
@@ -146,6 +157,71 @@ const Add = ({token}) => {
             </div>
           </div>
         </div>
+        <div>
+  <p className="mb-2">Event Type</p>
+  <div className="flex gap-3 flex-wrap">
+    {["party", "casual", "wedding", "office", "festival"].map(ev => (
+      <p
+        key={ev}
+        onClick={() =>
+          setEvent(prev =>
+            prev.includes(ev) ? prev.filter(e => e !== ev) : [...prev, ev]
+          )
+        }
+        className={`px-3 py-1 cursor-pointer rounded 
+          ${event.includes(ev) ? "bg-pink-100" : "bg-slate-200"}`}
+      >
+        {ev}
+      </p>
+    ))}
+  </div>
+</div>
+<div>
+  <p className="mb-2">Bundle Category</p>
+  <select
+    value={bundleCategory}
+    onChange={e => setBundleCategory(e.target.value)}
+    className="px-3 py-2"
+  >
+    <option value="top">Top</option>
+    <option value="bottom">Bottom</option>
+    <option value="footwear">Footwear</option>
+    <option value="accessory">Accessory</option>
+  </select>
+</div>
+<div>
+  <p className="mb-2">Tags (comma separated)</p>
+  <input
+    type="text"
+    value={tags}
+    onChange={e => setTags(e.target.value)}
+    placeholder="summer, trendy, cotton"
+    className="px-3 py-2 w-full max-w-[500px]"
+  />
+</div>
+<div className="flex gap-4">
+  <div>
+    <p className="mb-2">Color</p>
+    <input
+      type="text"
+      value={color}
+      onChange={e => setColor(e.target.value)}
+      placeholder="Red"
+      className="px-3 py-2"
+    />
+  </div>
+
+  <div>
+    <p className="mb-2">Material</p>
+    <input
+      type="text"
+      value={material}
+      onChange={e => setMaterial(e.target.value)}
+      placeholder="Cotton"
+      className="px-3 py-2"
+    />
+  </div>
+</div>
 
         <div className='flex gap-2 mt-2'>
           <input onChange={() => setBestseller(prev => !prev)} checked={bestseller} type="checkbox" id='bestseller' />

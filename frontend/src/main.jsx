@@ -4,11 +4,13 @@ import App from './App.jsx'
 import './index.css'
 import { BrowserRouter } from 'react-router-dom'
 import ShopContextProvider from './context/ShopContext.jsx'
+import SmartAssistantIcon from './components/SmartAssistantIcon.jsx'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <ShopContextProvider>
       <App />
+      <SmartAssistantIcon />
     </ShopContextProvider>
   </BrowserRouter>,
 )
