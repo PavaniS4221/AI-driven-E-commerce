@@ -9,7 +9,32 @@ const productSchema = new mongoose.Schema({
     subCategory: { type: String, required: true },
     sizes: { type: Array, required: true },
     bestseller: { type: Boolean },
-    date: { type: Number, required: true }
+    date: { type: Number, required: true },
+    event: {
+        type: [String],
+        enum: ["party", "casual", "wedding", "office", "festival"],
+        required: true
+      },
+      
+      bundleCategory: {
+        type: String,
+        enum: ["top", "bottom", "footwear", "accessory"],
+        required: true
+      },
+      
+      tags: {
+        type: [String],
+        default: []
+      },
+      
+      color: {
+        type: String
+      },
+      
+      material: {
+        type: String
+      }
+      
 })
 
 const productModel  = mongoose.models.product || mongoose.model("product",productSchema);
