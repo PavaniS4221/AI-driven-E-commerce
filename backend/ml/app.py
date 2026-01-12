@@ -10,11 +10,7 @@ def predict_sales():
         "forecast": train_and_predict()
     }
 
-
 @app.post("/generate-bundles")
 def get_bundles(user_context: dict = Body(...)):
-    bundles = generate_bundles(
-        user_context,
-        n_bundles=user_context.get("n_bundles", 5)
-    )
+    bundles = generate_bundles(user_context)
     return { "bundles": bundles }
