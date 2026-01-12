@@ -10,7 +10,7 @@ export const getBundles = async (req, res) => {
     const response = await axios.post(
       "http://127.0.0.1:8000/generate-bundles",
       req.body,
-      { timeout: 30000 }
+      
     );
 
     // Send result back to frontend

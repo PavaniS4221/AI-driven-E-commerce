@@ -1,138 +1,156 @@
 import os
-from dotenv import load_dotenv
 import random
+from serializer.mongo import serialize_mongo_doc
+import heapq
+
+
 from pymongo import MongoClient
 import pandas as pd
 from mlxtend.frequent_patterns import apriori, association_rules
 
-load_dotenv()
-mongo_uri = os.getenv("MONGO_URI")
+
+
 
 # ---------------- MongoDB Connection ----------------
-client = MongoClient(mongo_uri)
-db = client["e-commerce"]
-product_collection = db["products"]
-transactions_collection = db["orders"]
+
+client = MongoClient(
+        "mongodb+srv://paaani2004_db_user:123abc.S@cluster0.wyi4fit.mongodb.net"
+    )
+   
+db = client["test"]
+
+product_collection = db.products
+transactions_collection = db.orders
+
+def complementary_colors(color):
+    mapping = {
+        "red": ["black", "gold", "white"],
+        "black": ["red", "gold", "white"],
+        "blue": ["black", "silver", "white"],
+        "white": ["black", "red", "blue"]
+    }
+    return mapping.get(color, [])
 
 # ---------------- Helper Functions ----------------
-def score_product(product, context):
-    """
-    Scores a product based on user context for personalized bundles
-    """
+
+
+def score_product(product, context, anchor_color=None):
     score = 0
 
-    # Event matching
-    if "event" in product and context.get("event"):
-        if any(e.lower() in [ev.lower() for ev in product["event"]] for e in context["event"]):
-            score += 3
+    # Event match (MOST IMPORTANT)
+    if context["event"] in product.get("event", []):
+        score += 5
+
+    # Color logic
+    if product.get("color") == context["color"]:
+        score += 3
+    elif anchor_color and product.get("color") in complementary_colors(anchor_color):
+        score += 2
+
+    # Tag overlap
+    score += len(set(product.get("tags", [])) & set(context.get("tags", [])))
+
+    # Recency
+    if product.get("date", 0) >= context.get("recentDate", 0):
+        score += 1
 
     # Bestseller
-    if product.get("bestseller", False):
+    if product.get("bestseller"):
         score += 1
 
-    # Recent products
-    if product.get("date", 0) >= context.get("recentDate", 0):
-        score += 0.5
-
-    # Tag matching
-    if context.get("tags"):
-        tag_overlap = len(set(product.get("tags", [])) & set(context["tags"]))
-        score += tag_overlap
-
-    # Color matching
-    if context.get("color") and product.get("color") == context["color"]:
-        score += 1
-
-    # Randomness to vary bundles
-    score += random.random()
     return score
+
 
 def generate_association_rules(transactions, min_support=0.1):
     """
     Generate association rules from past transactions
     """
+    print("Generating association rules...")
     if not transactions:
         return pd.DataFrame()
+    
+    
 
     all_items = sorted({item for t in transactions for item in t})
     df = pd.DataFrame([{item: (item in t) for item in all_items} for t in transactions])
+    
     frequent_itemsets = apriori(df, min_support=min_support, use_colnames=True)
     rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=0.5)
     return rules
 
 # ---------------- Bundle Generation Function ----------------
-def generate_bundles(context: dict, n_bundles: int = 5):
-    """
-    Generates personalized outfit bundles from database products.
-    Each bundle always contains top, bottom, footwear, accessory
-    """
-    # Load products and past transactions
-    products = list(product_collection.find({}))
-    past_transactions_cursor = transactions_collection.find({})
-    past_transactions = [t["products"] for t in past_transactions_cursor]
 
-    # Group products by bundleCategory
+
+def generate_bundles(context):
+    products = list(product_collection.find({}))
+    
+    products = [serialize_mongo_doc(p) for p in products]
+    bundles = []
+
     category_map = {}
     for p in products:
         category_map.setdefault(p["bundleCategory"], []).append(p)
 
-    # Generate association rules
-    rules = generate_association_rules(past_transactions)
-    required_categories = ["top", "bottom", "footwear", "accessory"]
-
-    bundles = []
-
-    for _ in range(n_bundles):
+    precomputed_scores = {}
+    for cat, items in category_map.items():
+        precomputed_scores[cat] = [
+            (score_product(p, context), p) for p in items if p["price"] <= context["maxPrice"]
+        ]
+    
+    for _ in range(context["n_bundles"]):
         bundle = {}
         total_price = 0
 
-        # Pick product for each required category
-        for cat in required_categories:
-            if cat in category_map and category_map[cat]:
-                scored = [(score_product(p, context), p) for p in category_map[cat]]
-                scored.sort(key=lambda x: x[0], reverse=True)
+        # -------- TOP --------
+        tops_scores = precomputed_scores.get("top", [])
+        if not tops_scores:
+            continue
 
-                # Filter by maxPrice if provided
-                top_choices = [
-                    p for s, p in scored
-                    if total_price + p["price"] <= context.get("maxPrice", float('inf'))
-                ]
+        top_choices = heapq.nlargest(3, tops_scores, key=lambda x: x[0])
+       
+        top = random.choice(top_choices)  # pick randomly
+        print(top[1]["price"])
+       
 
-                if not top_choices:
-                    top_choices = [p for s, p in scored[:2]]
+        bundle["top"] = top
+        total_price += top[1]["price"]
 
-                chosen = random.choice(top_choices)
-                total_price += chosen["price"]
+        anchor_color = top[1]["color"]
+        precomputed_scores["top"] = [(s, t) for s, t in tops_scores if t["_id"] != top[1]["_id"]]
+        # -------- BOTTOM --------
+        bottoms_scores = [
+            (s, b) for s, b in precomputed_scores.get("bottom", [])
+            if total_price + b["price"] <= context["maxPrice"]
+        ]
 
-                # Ensure image URLs are full paths
-                chosen["image"] = [
-                    f"http://localhost:5000/images/{img}" if not img.startswith("http") else img
-                    for img in chosen.get("image", ["placeholder.png"])
-                ]
+        if bottoms_scores:
+            bottom_choices = heapq.nlargest(3, bottoms_scores, key=lambda x: x[0])
+            bottom = random.choice([b for s, b in bottom_choices])
+            bundle["bottom"] = bottom
+            total_price += bottom["price"]
 
-                bundle[cat] = chosen
-            else:
-                # Placeholder if category missing
-                bundle[cat] = {
-                    "name": "No product",
-                    "price": 0,
-                    "image": ["http://localhost:5000/images/placeholder.png"]
-                }
+            precomputed_scores["bottom"] = [(s, b) for s, b in bottoms_scores if b["_id"] != bottom["_id"]]
+        else:
+            bundle["bottom"] = {"name": "No bottom", "price": 0}
 
-        # Apply association rules to refine bundle
-        if not rules.empty:
-            for rule in rules.itertuples():
-                antecedents = list(rule.antecedents)
-                consequents = list(rule.consequents)
-                bundle_names = [item["name"] for item in bundle.values()]
-                if any(a in bundle_names for a in antecedents):
-                    for c in consequents:
-                        for cat, item in bundle.items():
-                            if item["name"] != c and cat in required_categories:
-                                for p in category_map.get(cat, []):
-                                    if p["name"] == c and total_price - item["price"] + p["price"] <= context.get("maxPrice", float('inf')):
-                                        total_price = total_price - item["price"] + p["price"]
-                                        bundle[cat] = p
+        bundle["bottom"] = bottom
+        total_price += bottom["price"]
+
+        # -------- ACCESSORY --------
+        accessories_scores = [
+            (s, a) for s, a in precomputed_scores.get("accessory", [])
+            if total_price + a["price"] <= context["maxPrice"]
+        ]
+
+        if accessories_scores:
+            accessory_choices = heapq.nlargest(3, accessories_scores, key=lambda x: x[0])
+            acc_choices = [a for s, a in accessory_choices]
+            accessory = random.choice(acc_choices)
+            precomputed_scores["accessory"] = [(s, a) for s, a in accessories_scores if a["_id"] != accessory["_id"]]
+        else:
+            accessory = {"name": "No accessory", "price": 0}
+
+        bundle["accessory"] = accessory
 
         bundles.append(bundle)
 

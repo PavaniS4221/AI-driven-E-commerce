@@ -6,6 +6,6 @@ const router = express.Router();
 
 // POST /api/bundles/generate
 router.post("/generate", getBundles);
-console.log("BUNDLE ROUTE HIT")
+
 
 export default router;
