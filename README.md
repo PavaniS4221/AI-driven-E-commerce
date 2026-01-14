@@ -42,6 +42,82 @@ The Implementation / Approach
 
 ---
 
+Smart Bundle Generation Algorithm
+
+This algorithm generates personalized outfit bundles based on user preferences and past orders. It combines association rules from previous bundle purchases with context-based scoring to ensure relevant suggestions.
+
+Algorithm Steps
+
+Fetch Products
+
+Load all products from the database.
+
+Organize products by category: top, bottom, accessory.
+
+Fetch Past Bundle Orders
+
+Use only orders where isBundle = true and matching the current event.
+
+If no past bundles exist, skip association rules.
+
+Generate Association Rules
+
+Apply the Apriori algorithm to past bundle transactions.
+
+Build an association map of antecedent → consequents.
+
+Score Products
+
+Assign a score to each product based on:
+
+Matching color
+
+Matching tags
+
+Within maxPrice
+
+Higher score indicates a better match for user context.
+
+Generate Bundles
+
+For each bundle:
+
+Select a top (highest scoring).
+
+Select a bottom:
+
+Preferably associated with the chosen top.
+
+Fallback to highest scoring bottom if no association exists.
+
+Select an accessory:
+
+Preferably associated with the chosen bottom.
+
+Fallback to highest scoring accessory if no association exists.
+
+Ensure the total price ≤ maxPrice.
+
+Return Bundles
+
+Return n_bundles generated bundles to the user.
+
+
+
+✅ Features
+
+Generates bundles based on past bundle associations (Apriori).
+
+Falls back to scoring-based selection if no associations exist.
+
+Respects max price and user preferences (color, tags).
+
+Flexible for any number of categories (top, bottom, accessory).
+
+If you want, I can also make a shorter 20–30 line version specifically for your README without all the code details, just pseudocode and steps, so it looks clean and professional.
+
+Do you want me to do that too?
+
 ### **What (The Result / Deliverables)**
 
 * **Functional E-commerce Admin Panel**
