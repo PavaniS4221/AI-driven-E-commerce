@@ -1,157 +1,172 @@
-import os
-import random
-from serializer.mongo import serialize_mongo_doc
-import heapq
-
-
-from pymongo import MongoClient
 import pandas as pd
 from mlxtend.frequent_patterns import apriori, association_rules
+import random
+import heapq
+from pymongo import MongoClient
 
-
-
-
-# ---------------- MongoDB Connection ----------------
-
-client = MongoClient(
-        "mongodb+srv://paaani2004_db_user:123abc.S@cluster0.wyi4fit.mongodb.net"
-    )
-   
+# ---------------- MongoDB Setup ----------------
+client = MongoClient("mongodb+srv://paaani2004_db_user:123abc.S@cluster0.wyi4fit.mongodb.net")
 db = client["test"]
+product_collection = db["products"]
+order_collection = db["orders"]
 
-product_collection = db.products
-transactions_collection = db.orders
+# ---------------- Serialization ----------------
+def serialize_mongo_doc(doc):
+    doc["_id"] = str(doc["_id"])
+    return doc
 
-def complementary_colors(color):
-    mapping = {
-        "red": ["black", "gold", "white"],
-        "black": ["red", "gold", "white"],
-        "blue": ["black", "silver", "white"],
-        "white": ["black", "red", "blue"]
-    }
-    return mapping.get(color, [])
+# ---------------- Transactions ----------------
+def get_bundle_transactions(event):
+    """
+    Get transactions for Apriori: only orders with isBundle=True and matching event
+    Returns list of list of item names
+    """
+    orders = list(order_collection.find({"isBundle": True, "event": event}))
+    transactions = [o["items"] for o in orders if len(o.get("items", [])) >= 2]
+    return transactions
 
-# ---------------- Helper Functions ----------------
+# ---------------- Association Rules ----------------
+def generate_association_rules_from_transactions(transactions, min_support=0.01, min_confidence=0.2):
+    if not transactions:
+        return pd.DataFrame()  # no rules
+
+    # one-hot encode using item names
+    all_items = set(item["name"] for t in transactions for item in t)
+    df = pd.DataFrame([{item: (any(i["name"] == item for i in t)) for item in all_items} for t in transactions])
+
+    frequent_itemsets = apriori(df, min_support=min_support, use_colnames=True)
+    if frequent_itemsets.empty:
+        return pd.DataFrame()
+    
+    rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=min_confidence)
+    return rules
 
 
-def score_product(product, context, anchor_color=None):
+# ---------------- Build association map ----------------
+def build_association_map(rules_df):
+    assoc_map = {}
+    for _, row in rules_df.iterrows():
+        for antecedent in row['antecedents']:
+            assoc_map.setdefault(antecedent, set()).update(row['consequents'])
+    return assoc_map
+
+# ---------------- Scoring ----------------
+def score_product(product, payload):
     score = 0
 
-    # Event match (MOST IMPORTANT)
-    if context["event"] in product.get("event", []):
+    # Event relevance
+    if payload.get("event") in product.get("event", []):
         score += 5
 
-    # Color logic
-    if product.get("color") == context["color"]:
+    # Tags match
+    product_tags = set(map(str.lower, product.get("tags", [])))
+    payload_tags = set(map(str.lower, payload.get("tags", [])))
+    score += 2 * len(product_tags & payload_tags)
+
+    # Color match
+    if str(product.get("color", "")).lower() == payload.get("color", "").lower():
         score += 3
-    elif anchor_color and product.get("color") in complementary_colors(anchor_color):
-        score += 2
 
-    # Tag overlap
-    score += len(set(product.get("tags", [])) & set(context.get("tags", [])))
-
-    # Recency
-    if product.get("date", 0) >= context.get("recentDate", 0):
-        score += 1
-
-    # Bestseller
-    if product.get("bestseller"):
+    # Price suitability
+    if int(product.get("price", 0)) <= payload.get("maxPrice", 999999):
         score += 1
 
     return score
 
 
-def generate_association_rules(transactions, min_support=0.1):
-    """
-    Generate association rules from past transactions
-    """
-    print("Generating association rules...")
-    if not transactions:
-        return pd.DataFrame()
-    
-    
+# ---------------- Generate Bundles ----------------
+def generate_bundles(payload):
+    print("Payload received:", payload)
 
-    all_items = sorted({item for t in transactions for item in t})
-    df = pd.DataFrame([{item: (item in t) for item in all_items} for t in transactions])
-    
-    frequent_itemsets = apriori(df, min_support=min_support, use_colnames=True)
-    rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=0.5)
-    return rules
+    products = [serialize_mongo_doc(p) for p in product_collection.find({})]
+    if not products:
+        return []
 
-# ---------------- Bundle Generation Function ----------------
-
-
-def generate_bundles(context):
-    products = list(product_collection.find({}))
-    
-    products = [serialize_mongo_doc(p) for p in products]
-    bundles = []
-
-    category_map = {}
+    # ---- Normalize ----
     for p in products:
-        category_map.setdefault(p["bundleCategory"], []).append(p)
+        p["price"] = int(p.get("price", 0))
+        p["color"] = str(p.get("color", "")).lower()
+        p["tags"] = [t.lower() for t in p.get("tags", [])]
+        p["event"] = p.get("event", [])
 
-    precomputed_scores = {}
-    for cat, items in category_map.items():
-        precomputed_scores[cat] = [
-            (score_product(p, context), p) for p in items if p["price"] <= context["maxPrice"]
-        ]
+    # ---- Filter by price ----
+    products = [p for p in products if p["price"] <= payload["maxPrice"]]
+
+    # ---- Split by category ----
+    tops = [p for p in products if p["bundleCategory"] == "top"]
+    bottoms = [p for p in products if p["bundleCategory"] == "bottom"]
+    accessories = [p for p in products if p["bundleCategory"] == "accessory"]
+
+    if not tops:
+        print("❌ No tops found")
+        return []
+
+    # ---- Apriori decision ----
+    transactions = get_bundle_transactions(payload["event"])
+    use_apriori = len(transactions) > 0
+
+    association_map = {}
+    if use_apriori:
+        rules_df = generate_association_rules_from_transactions(transactions)
+        if not rules_df.empty:
+            association_map = build_association_map(rules_df)
+    used_tops = set()
+    used_bottoms = set()
+    used_accessories = set()
     
-    for _ in range(context["n_bundles"]):
-        bundle = {}
-        total_price = 0
+    def pick_diverse(candidates, used_set, k=3):
+        available = [p for p in candidates if p["_id"] not in used_set]
+        if not available:
+            available = candidates  # fallback
 
-        # -------- TOP --------
-        tops_scores = precomputed_scores.get("top", [])
-        if not tops_scores:
+        ranked = sorted(
+            available,
+            key=lambda p: score_product(p, payload),
+            reverse=True
+        )
+
+        top_k = ranked[:k] if len(ranked) >= k else ranked
+        choice = random.choice(top_k)
+        used_set.add(choice["_id"])
+        return choice
+
+    bundles = []
+    for _ in range(payload.get("n_bundles", 3)):
+        bundle = {}
+
+    # 1️⃣ PICK TOP
+        top = pick_diverse(tops, used_tops)
+        bundle["top"] = top
+
+        # 2️⃣ PICK BOTTOM
+        candidate_bottoms = bottoms
+        if use_apriori:
+            allowed = association_map.get(top["name"])
+            if allowed:
+                candidate_bottoms = [b for b in bottoms if b["name"] in allowed]
+
+        if not candidate_bottoms:
             continue
 
-        top_choices = heapq.nlargest(3, tops_scores, key=lambda x: x[0])
-       
-        top = random.choice(top_choices)  # pick randomly
-        print(top[1]["price"])
-       
-
-        bundle["top"] = top
-        total_price += top[1]["price"]
-
-        anchor_color = top[1]["color"]
-        precomputed_scores["top"] = [(s, t) for s, t in tops_scores if t["_id"] != top[1]["_id"]]
-        # -------- BOTTOM --------
-        bottoms_scores = [
-            (s, b) for s, b in precomputed_scores.get("bottom", [])
-            if total_price + b["price"] <= context["maxPrice"]
-        ]
-
-        if bottoms_scores:
-            bottom_choices = heapq.nlargest(3, bottoms_scores, key=lambda x: x[0])
-            bottom = random.choice([b for s, b in bottom_choices])
-            bundle["bottom"] = bottom
-            total_price += bottom["price"]
-
-            precomputed_scores["bottom"] = [(s, b) for s, b in bottoms_scores if b["_id"] != bottom["_id"]]
-        else:
-            bundle["bottom"] = {"name": "No bottom", "price": 0}
-
+        bottom = pick_diverse(candidate_bottoms, used_bottoms)
         bundle["bottom"] = bottom
-        total_price += bottom["price"]
+        # 3️⃣ PICK ACCESSORY
+        candidate_accessories = accessories
+        if use_apriori:
+            allowed = association_map.get(bottom["name"])
+            if allowed:
+                candidate_accessories = [
+                    a for a in accessories if a["name"] in allowed
+            ]
 
-        # -------- ACCESSORY --------
-        accessories_scores = [
-            (s, a) for s, a in precomputed_scores.get("accessory", [])
-            if total_price + a["price"] <= context["maxPrice"]
-        ]
+        if not candidate_accessories:
+            continue
 
-        if accessories_scores:
-            accessory_choices = heapq.nlargest(3, accessories_scores, key=lambda x: x[0])
-            acc_choices = [a for s, a in accessory_choices]
-            accessory = random.choice(acc_choices)
-            precomputed_scores["accessory"] = [(s, a) for s, a in accessories_scores if a["_id"] != accessory["_id"]]
-        else:
-            accessory = {"name": "No accessory", "price": 0}
-
+        accessory = pick_diverse(candidate_accessories, used_accessories)
         bundle["accessory"] = accessory
 
         bundles.append(bundle)
-
     return bundles
+
+
+   
