@@ -1,173 +1,126 @@
+AI-Driven E-commerce Website
+
+## **Overview**
+
+This project is a **full-stack e-commerce application** built using the **MERN stack** (MongoDB, Express.js, React.js, Node.js) with **smart outfit bundle generation**. It allows users to browse products, add to cart, and place orders. The system also generates **personalized product bundles** based on user preferences and past orders.
 
 ---
 
-The Purpose / Motivation
+## **Features**
 
-* **Why this project exists:**
+### **User-Facing Features**
 
-  * Many e-commerce platforms struggle to **predict future sales**, manage stock efficiently, and optimize revenue.
-  * Offline tracking or basic reporting does not provide actionable insights.
-  * Businesses need a **data-driven system** to forecast sales and make informed decisions.
+* User authentication and profile management
+* Browse products by category, color, tags, and price
+* Add single products or bundles to cart
+* Place orders with multiple payment options (COD, UPI, Card, Wallet)
+* View past orders and order status updates
+* Smart bundle suggestions based on user preferences
 
-* **Why MERN stack is used:**
+### **Admin Features**
 
-  * **React.js** for a fast, interactive frontend.
-  * **Node.js + Express** for a robust backend API.
-  * **MongoDB** for flexible, scalable database storage.
-  * Python + Prophet for **accurate sales prediction** using historical data.
-
----
-
-The Implementation / Approach
-
-* **Backend**
-
-  * Node.js + Express handles all API endpoints for orders, payments, and user management.
-  * A Python module inside the backend fetches historical order data from MongoDB, preprocesses it, and uses **Prophet** to forecast future sales.
-  * `/predict` endpoint returns the forecast in JSON format for the frontend to consume.
-
-* **Frontend**
-
-  * React.js admin panel displays orders, payments, and predicted sales in **tables and charts**.
-  * Admin can view forecasts and plan inventory, promotions, and logistics.
-
-* **Sales Prediction Flow**
-
-  1. Fetch **paid orders** from MongoDB.
-  2. Convert timestamps into datetime format.
-  3. Group sales by date and sum amounts.
-  4. Train **Prophet** with daily sales data and weekly seasonality.
-  5. Predict sales for the next 30 days.
-  6. Send forecast to frontend for visualization.
+* Manage products, categories, and bundles
+* View all orders and order statistics
+* Track bundle performance and user purchase patterns
 
 ---
 
-Smart Bundle Generation Algorithm
+## **Smart Bundle Generation Algorithm**
 
-This algorithm generates personalized outfit bundles based on user preferences and past orders. It combines association rules from previous bundle purchases with context-based scoring to ensure relevant suggestions.
+The **Smart Bundle Generator** provides personalized outfit suggestions by combining **context-aware scoring** with **association rules** from previous bundle purchases.
 
-Algorithm Steps
+### **Algorithm Steps**
 
-Fetch Products
+1. **Fetch Products**
 
-Load all products from the database.
+   * Load all products from the database.
+   * Organize products by category (e.g., top, bottom, accessory).
 
-Organize products by category: top, bottom, accessory.
+2. **Fetch Past Bundle Orders**
 
-Fetch Past Bundle Orders
+   * Filter orders where `isBundle = true` and matching the current **event** (e.g., party, casual).
+   * If no past bundles exist, skip association rules.
 
-Use only orders where isBundle = true and matching the current event.
+3. **Generate Association Rules**
 
-If no past bundles exist, skip association rules.
+   * Apply **Apriori algorithm** to past bundle transactions.
+   * Build an **association map** of `antecedent → consequents` to suggest compatible products.
 
-Generate Association Rules
+4. **Score Products**
 
-Apply the Apriori algorithm to past bundle transactions.
+   * Assign a **score** to each product based on:
 
-Build an association map of antecedent → consequents.
+     * Matching **color** and **tags**
+     * Price within **max budget**
+   * Products with higher scores are more relevant to the user context.
 
-Score Products
+5. **Generate Bundles**
 
-Assign a score to each product based on:
+   * For each bundle:
 
-Matching color
+     1. Select a **top** (highest scoring product).
+     2. Select a **bottom**:
 
-Matching tags
+        * Preferably associated with the chosen top.
+        * Fallback to highest scoring bottom if no association exists.
+     3. Select an **accessory**:
 
-Within maxPrice
+        * Preferably associated with the chosen bottom.
+        * Fallback to highest scoring accessory if no association exists.
+     4. Ensure **total price ≤ max budget**.
 
-Higher score indicates a better match for user context.
+6. **Return Bundles**
 
-Generate Bundles
-
-For each bundle:
-
-Select a top (highest scoring).
-
-Select a bottom:
-
-Preferably associated with the chosen top.
-
-Fallback to highest scoring bottom if no association exists.
-
-Select an accessory:
-
-Preferably associated with the chosen bottom.
-
-Fallback to highest scoring accessory if no association exists.
-
-Ensure the total price ≤ maxPrice.
-
-Return Bundles
-
-Return n_bundles generated bundles to the user.
-
-
-
-✅ Features
-
-Generates bundles based on past bundle associations (Apriori).
-
-Falls back to scoring-based selection if no associations exist.
-
-Respects max price and user preferences (color, tags).
-
-Flexible for any number of categories (top, bottom, accessory).
-
-If you want, I can also make a shorter 20–30 line version specifically for your README without all the code details, just pseudocode and steps, so it looks clean and professional.
-
-Do you want me to do that too?
-
-### **What (The Result / Deliverables)**
-
-* **Functional E-commerce Admin Panel**
-
-  * Manage users, orders, payments, and inventory.
-  * Structured as `admin/frontend` and `admin/backend`.
-
-* **Sales Forecasting Module**
-
-  * Accurate 30-day sales predictions based on historical order data.
-  * Helps in **planning stock, revenue projections, and promotions**.
-
-* **APIs and Integration**
-
-  * `/predict` API provides forecast in JSON.
-  * Frontend consumes API to display data dynamically.
-
-* **Tech Stack Deliverables**
-
-  * Frontend: React.js + TailwindCSS
-  * Backend: Node.js + Express.js + Python (Prophet)
-  * Database: MongoDB
-  * Version control: GitHub
+   * Generate `n_bundles` for the user with a combination of **association-based** and **scoring-based** selections.
 
 ---
-follow these steps to get this.
 
-# Clone the repository
-git clone https://github.com/PavaniS4221/AI-driven-E-commerce.git
-cd AI-driven-E-commerce
+## **Technology Stack**
 
-# Backend: install Node.js dependencies
-cd admin/backend
-npm install
+| Layer          | Technology       |
+| -------------- | ---------------- |
+| Database       | MongoDB          |
+| Backend        | Node.js, Express |
+| Frontend       | React.js         |
+| API Requests   | Axios            |
+| Authentication | JWT, bcryptjs    |
+| UI Styling     | Tailwind CSS     |
 
-# Python dependencies for sales prediction
-pip install pandas prophet pymongo fastapi uvicorn
+---
 
-# Frontend: install React dependencies
-cd ../frontend
-npm install
+## **Data Models**
 
-# Go back to backend and start server
-cd ../backend
-# Start Node.js backend (change server.js if your entry point is different)
-npm start
+### **Product**
 
-# Open a new terminal/tab and start frontend
-cd ../frontend
-npm start
+* `_id`, `name`, `category`, `tags`, `color`, `price`, `bundleCategory`
+
+### **Order**
+
+* `userId`, `items`, `amount`, `address`, `status`, `paymentMethod`, `payment`, `date`, `isBundle`, `bundleCategory`
+
+### **Bundle Orders**
+
+* Same structure as Order, specifically for **bundles** to track past transactions.
+
+---
+
+---
+
+## **How it Works**
+
+1. User selects event, color, budget, and other preferences.
+2. The system checks past **bundle orders** for association patterns.
+3. The **Smart Bundle Generator** scores products and combines them into outfits.
+4. Bundles are displayed to the user, who can add all or individual items to the cart.
+5. Orders placed with `isBundle = true` are stored separately to improve future recommendations.
+
+---
+
+## **Future Enhancements**
+
+* Real-time **AI-based outfit visualization**
+* LLM search model
+  
 
 
 
