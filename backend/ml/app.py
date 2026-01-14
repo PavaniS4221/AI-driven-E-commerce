@@ -11,6 +11,8 @@ def predict_sales():
     }
 
 @app.post("/generate-bundles")
+
 def get_bundles(user_context: dict = Body(...)):
     bundles = generate_bundles(user_context)
+    print("Generated bundles:", bundles)
     return { "bundles": bundles }

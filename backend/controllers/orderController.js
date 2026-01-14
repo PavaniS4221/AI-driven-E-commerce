@@ -20,7 +20,7 @@ const placeOrder = async (req,res) => {
     
     try {
         
-        const { userId, items, amount, address} = req.body;
+        const { userId, items, amount, address,isBundle=false ,bundleCategory=null} = req.body;
 
         const orderData = {
             userId,
@@ -29,7 +29,9 @@ const placeOrder = async (req,res) => {
             amount,
             paymentMethod:"COD",
             payment:false,
-            date: Date.now()
+            date: Date.now(),
+            isBundle,          // true if it's a bundle, false otherwise
+            bundleCategory
         }
 
         const newOrder = new orderModel(orderData)

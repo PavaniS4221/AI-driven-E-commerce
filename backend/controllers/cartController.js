@@ -59,9 +59,17 @@ const getUserCart = async (req,res) => {
     try {
         
         const { userId } = req.body
+         
         
         const userData = await userModel.findById(userId)
+        if (!userData) {
+          return res.status(404).json({ success: false, message: "User not found" });
+          }
+
+    // Make sure cartData is at least an empty object
+    
         let cartData = await userData.cartData;
+
 
         res.json({ success: true, cartData })
 

@@ -17,14 +17,14 @@ const addProduct = async (req, res) => {
         const image4 = req.files.image4 && req.files.image4[0]
 
         const images = [image1, image2, image3, image4].filter((item) => item !== undefined)
-
+           
         let imagesUrl = await Promise.all(
             images.map(async (item) => {
                 let result = await cloudinary.uploader.upload(item.path, { resource_type: 'image' });
                 return result.secure_url
             })
         )
-
+// Uploads multiple images to Cloudinary in parallel and returns an array of their URLs
         const productData = {
             name,
             description,
@@ -50,7 +50,7 @@ const addProduct = async (req, res) => {
             date: Date.now()
         }
 
-        console.log(productData);
+        
 
         const product = new productModel(productData);
         await product.save()
