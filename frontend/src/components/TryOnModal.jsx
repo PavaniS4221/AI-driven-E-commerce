@@ -65,6 +65,7 @@ const TryOnModal = ({ productImage }) => {
     };
   }, [productImage]);
 
+  
   /* ================= DRAW ================= */
   const onResults = (results) => {
     const canvas = canvasRef.current;

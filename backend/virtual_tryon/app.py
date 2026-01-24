@@ -24,3 +24,4 @@ def remove_bg():
 
 if __name__ == "__main__":
     app.run(port=5000)
+

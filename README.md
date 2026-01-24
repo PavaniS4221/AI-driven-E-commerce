@@ -131,7 +131,6 @@ The Virtual Try-On module enables users to preview clothing items in real time u
 
 ---
 
-
 ## **Technology Stack**
 
 

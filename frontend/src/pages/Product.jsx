@@ -13,7 +13,6 @@ const Product = () => {
   const [size, setSize] = useState("");
   const [showTryOn, setShowTryOn] = useState(false);
 
-  // 🔹 Load product dynamically
   useEffect(() => {
     if (products && products.length > 0) {
       const product = products.find((p) => p._id === productId);
