@@ -119,7 +119,8 @@ const Product = () => {
         </div>
       )}
 
-      {/* ================= RELATED PRODUCTS ================= */}
+      {/* =============
+      ==== RELATED PRODUCTS ================= */}
       <RelatedProducts
         category={productData.category}
         subCategory={productData.subCategory}
