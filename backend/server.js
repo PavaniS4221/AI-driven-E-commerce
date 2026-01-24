@@ -10,7 +10,7 @@ import orderRouter from './routes/orderRoute.js'
 import analyticsRouter from './routes/analyticsRoute.js'
 import predictionRoutes from "./routes/PredictRoutes.js";
 import bundleRoutes from "./routes/bundleRoutes.js";
-
+import llmChatRouter from "./routes/llmChatRoute.js";
 import tryOnRouter from "./routes/tryOnRoute.js"
 
 
@@ -36,6 +36,7 @@ app.use('/api/order',orderRouter)
 app.use('/api/analytics',analyticsRouter)
 app.use("/api/predictions",predictionRoutes);
 app.use("/api/bundles",bundleRoutes);
+app.use("/api", llmChatRouter);
 
 app.get('/',(req,res)=>{
     res.send("API Working")

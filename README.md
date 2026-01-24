@@ -1,4 +1,4 @@
-AI-Driven E-commerce Website
+## **AI-Driven E-commerce Website**
 
 ## **Overview**
 
@@ -92,8 +92,6 @@ The **Smart Bundle Generator** provides personalized outfit suggestions by combi
 ### **Bundle Orders**
 
 * Same structure as Order, specifically for **bundles** to track past transactions.
-
----
 
 ---
 
