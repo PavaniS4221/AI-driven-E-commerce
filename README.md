@@ -2,14 +2,10 @@ AI-Driven E-commerce Website
 
 ## **Overview**
 
-<<<<<<< HEAD
 This project is a **full-stack e-commerce application** built using the **MERN stack** (MongoDB, Express.js, React.js, Node.js) with **Smart Outfit Bundle Generation** and an **AI-powered Virtual Try-On system**.
 
 The platform allows users to browse products, receive personalized outfit bundles, and virtually try clothing items using a webcam, improving user confidence and reducing return rates.
 
-=======
-This project is a **full-stack e-commerce application** built using the **MERN stack** (MongoDB, Express.js, React.js, Node.js) with **smart outfit bundle generation**. It allows users to browse products, add to cart, and place orders. The system also generates **personalized product bundles** based on user preferences and past orders.
->>>>>>> upstream/main
 
 ---
 
@@ -23,10 +19,7 @@ This project is a **full-stack e-commerce application** built using the **MERN s
 * Place orders with multiple payment options (COD, UPI, Card, Wallet)
 * View past orders and order status updates
 * Smart bundle suggestions based on user preferences
-<<<<<<< HEAD
 * AI-based Virtual Try-On using OpenCV
-=======
->>>>>>> upstream/main
 
 ### **Admin Features**
 
@@ -86,22 +79,6 @@ The **Smart Bundle Generator** provides personalized outfit suggestions by combi
 
 ---
 
-<<<<<<< HEAD
-=======
-## **Technology Stack**
-
-| Layer          | Technology       |
-| -------------- | ---------------- |
-| Database       | MongoDB          |
-| Backend        | Node.js, Express |
-| Frontend       | React.js         |
-| API Requests   | Axios            |
-| Authentication | JWT, bcryptjs    |
-| UI Styling     | Tailwind CSS     |
-
----
-
->>>>>>> upstream/main
 ## **Data Models**
 
 ### **Product**
