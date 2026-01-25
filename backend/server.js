@@ -10,7 +10,8 @@ import orderRouter from './routes/orderRoute.js'
 import analyticsRouter from './routes/analyticsRoute.js'
 import predictionRoutes from "./routes/PredictRoutes.js";
 import bundleRoutes from "./routes/bundleRoutes.js";
-
+import tryOnRouter from "./routes/tryOnRoute.js";
+import llmChatRouter from "./routes/llmChatRoute.js";
 
 
 // App Config
@@ -20,10 +21,14 @@ connectDB()
 connectCloudinary()
 
 // middlewares
-app.use(express.json())
-app.use(cors())
 
-// api endpoints
+app.use(cors())
+app.use(express.json({ limit: "50mb" }));
+
+
+// Routes
+app.use("/api/tryon", tryOnRouter);
+app.use("/api", llmChatRouter);
 app.use('/api/user',userRouter)
 app.use('/api/product',productRouter)
 app.use('/api/cart',cartRouter)
